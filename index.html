@@ -2,7 +2,10 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#064e3b">
     <title>Lovec Vltavínů - Pro Edice</title>
 
     <!-- KNIHOVNY -->
@@ -35,6 +38,7 @@
             flex-direction: column; 
             overflow: hidden; 
             transition: background-color 0.3s, color 0.3s;
+            overscroll-behavior: none; /* Zabraňuje "pull-to-refresh" efektu na mobilu */
         }
         h1, h2, h3, .brand-font { font-family: 'Rajdhani', sans-serif; }
 
@@ -50,6 +54,28 @@
         #map-container { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; }
         #map { height: 100%; width: 100%; }
         
+        /* RADAR (NOVÉ) */
+        .radar-panel {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            z-index: 3000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(4px);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+            border: 1px solid rgba(0,0,0,0.1);
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            color: #1f2937;
+        }
+        html.dark .radar-panel { background: rgba(31, 41, 55, 0.9); color: #f3f4f6; border-color: rgba(255,255,255,0.1); }
+        .radar-dist { color: #16a34a; font-family: monospace; font-size: 13px; }
+        html.dark .radar-dist { color: #4ade80; }
+
         /* KŘÍŽ */
         .map-crosshair {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -75,12 +101,12 @@
             font-size: 1.4rem; color: #333; cursor: pointer; transition: transform 0.1s; 
         }
         .map-btn:active { transform: scale(0.9); }
-        .map-btn.active-tool { background: #16a34a; color: white; } /* Styl pro aktivní pravítko */
+        .map-btn.active-tool { background: #16a34a; color: white; }
         html.dark .map-btn { background: #374151; color: white; }
         html.dark .map-btn.active-tool { background: #16a34a; }
 
         /* NAVIGACE */
-        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 5000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); }
+        .bottom-nav { position: fixed; bottom: 0; left: 0; width: 100%; background: rgba(255, 255, 255, 0.98); border-top: 1px solid #e5e7eb; display: flex; justify-content: space-around; padding: 12px 0; z-index: 5000; box-shadow: 0 -4px 20px rgba(0,0,0,0.05); padding-bottom: env(safe-area-inset-bottom); }
         html.dark .bottom-nav { background: rgba(31, 41, 55, 0.98); border-color: #374151; }
         .nav-item { display: flex; flex-direction: column; align-items: center; color: #9ca3af; font-size: 0.7rem; cursor: pointer; }
         .nav-item.active { color: #16a34a; transform: scale(1.05); font-weight: bold; }
@@ -88,7 +114,7 @@
         .nav-item i { font-size: 1.4rem; margin-bottom: 4px; }
 
         /* STRÁNKY */
-        .page { display: none; height: 100%; overflow-y: auto; padding-bottom: 80px; position: relative; z-index: 10; }
+        .page { display: none; height: 100%; overflow-y: auto; padding-bottom: 100px; position: relative; z-index: 10; }
         .page.active { display: block; }
         
         /* MODALY */
@@ -102,7 +128,7 @@
         .modal-text-content { font-size: 0.9rem; line-height: 1.5; opacity: 0.9; }
 
         /* SEARCH */
-        .search-overlay { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; z-index: 3000; background: white; border-radius: 50px; padding: 8px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; }
+        .search-overlay { position: absolute; top: 60px; left: 50%; transform: translateX(-50%); width: 90%; max-width: 400px; z-index: 3000; background: white; border-radius: 50px; padding: 8px 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); display: flex; align-items: center; }
         html.dark .search-overlay { background: #1f2937; color: white; }
         .search-input { width: 100%; border: none; outline: none; font-size: 14px; background: transparent; margin-left: 10px; }
         html.dark .search-input { color: white; }
@@ -133,20 +159,19 @@
                 <div>
                     <h4 class="font-bold text-green-700 dark:text-green-400 border-b border-green-200 mb-2 pb-1">1. Jak používat mapu</h4>
                     <ul class="list-disc pl-5 space-y-1">
+                        <li><strong>Radar:</strong> Nahoře vidíte vzdálenost k nejbližší lokalitě.</li>
                         <li><strong>Pohyb:</strong> Mapu posouváte tažením prstu.</li>
                         <li><strong>Modrý bod:</strong> Vaše aktuální GPS poloha.</li>
                         <li><strong>Žluté body:</strong> Vaše nálezy. Kliknutím je upravíte.</li>
-                        <li><strong>Barevné body:</strong> Databáze lokalit.</li>
-                        <li><strong>Pravítko <i class="fas fa-ruler"></i>:</strong> Aktivujte a klikněte na dva body pro změření vzdálenosti.</li>
-                        <li><strong>Červený kříž:</strong> Střed mapy (pro manuální zaměření).</li>
+                        <li><strong>Pravítko <i class="fas fa-ruler"></i>:</strong> Měření vzdálenosti mezi dvěma body.</li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="font-bold text-green-700 dark:text-green-400 border-b border-green-200 mb-2 pb-1">2. Funkce aplikace</h4>
                     <ul class="list-disc pl-5 space-y-1">
-                        <li><strong>Nález:</strong> Při přidávání nálezu si můžete vybrat, zda použít <b>GPS</b> (kde stojíte) nebo <b>Kříž</b> (střed mapy).</li>
-                        <li><strong>Export GPX:</strong> V Zápisníku si můžete stáhnout soubor pro Mapy.cz.</li>
-                        <li><strong>Zálohování:</strong> Používejte pravidelně tlačítko Zálohovat (JSON).</li>
+                        <li><strong>Nález:</strong> Při přidávání nálezu si můžete vybrat, zda použít <b>GPS</b> nebo <b>Kříž</b>.</li>
+                        <li><strong>Galerie:</strong> V Zápisníku přepínejte mezi seznamem a fotkami.</li>
+                        <li><strong>Export:</strong> Zálohujte data do souboru nebo GPX pro mapy.</li>
                     </ul>
                 </div>
             </div>
@@ -155,7 +180,7 @@
         </div>
     </div>
 
-    <!-- === MODAL: DETAIL OBLASTI (DASHBOARD) === -->
+    <!-- === MODAL: DETAIL OBLASTI === -->
     <div id="region-modal" class="custom-modal">
         <div class="modal-box relative">
             <button onclick="closeModals()" class="absolute top-4 right-4 opacity-50"><i class="fas fa-times"></i></button>
@@ -251,79 +276,31 @@
         </div>
     </div>
 
-    <!-- === MODAL: ZÁPIS NÁLEZU (S PŘEPÍNAČEM POLOHY) === -->
+    <!-- === MODAL: ZÁPIS NÁLEZU === -->
     <div id="add-modal" class="custom-modal">
         <div class="modal-box">
             <h3 class="text-xl font-bold mb-2 text-center text-gray-800 dark:text-white" id="add-modal-title">Zaevidovat nález</h3>
             <input type="hidden" id="editing-find-id">
             
-            <!-- PŘEPÍNAČ POLOHY -->
             <div class="flex gap-2 mb-3 p-1 bg-gray-100 dark:bg-gray-700 rounded-lg">
-                <button id="btn-loc-gps" onclick="toggleLocationSource('gps')" class="flex-1 py-1.5 rounded text-xs font-bold transition shadow bg-white dark:bg-gray-600 text-green-600 dark:text-green-400">
-                    <i class="fas fa-crosshairs mr-1"></i> Dle GPS
-                </button>
-                <button id="btn-loc-cross" onclick="toggleLocationSource('cross')" class="flex-1 py-1.5 rounded text-xs font-bold transition text-gray-500 dark:text-gray-400 hover:bg-white hover:dark:bg-gray-600">
-                    <i class="fas fa-plus mr-1"></i> Dle Kříže
-                </button>
+                <button id="btn-loc-gps" onclick="toggleLocationSource('gps')" class="flex-1 py-1.5 rounded text-xs font-bold transition shadow bg-white dark:bg-gray-600 text-green-600 dark:text-green-400"><i class="fas fa-crosshairs mr-1"></i> Dle GPS</button>
+                <button id="btn-loc-cross" onclick="toggleLocationSource('cross')" class="flex-1 py-1.5 rounded text-xs font-bold transition text-gray-500 dark:text-gray-400 hover:bg-white hover:dark:bg-gray-600"><i class="fas fa-plus mr-1"></i> Dle Kříže</button>
             </div>
 
             <div id="location-status" class="text-[10px] text-center mb-3 p-1 bg-gray-100 dark:bg-gray-700 rounded text-green-600 font-mono">Načítám souřadnice...</div>
             
             <div class="space-y-3 max-h-[60vh] overflow-y-auto p-1">
-                <!-- Vlastní název -->
-                <div>
-                    <label class="text-xs text-gray-500 font-bold uppercase ml-1">Označení</label>
-                    <input type="text" id="find-name" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm font-bold" placeholder="např. Ježek 01">
-                </div>
-
-                <!-- Dvojřádek: Váha a Tvar -->
+                <div><label class="text-xs text-gray-500 font-bold uppercase ml-1">Označení</label><input type="text" id="find-name" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm font-bold" placeholder="např. Ježek 01"></div>
                 <div class="flex gap-2">
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 font-bold uppercase ml-1">Váha (g)</label>
-                        <input type="number" step="0.01" id="find-weight" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm" placeholder="0.0g">
-                    </div>
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 font-bold uppercase ml-1">Stav</label>
-                        <select id="find-state" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm">
-                            <option value="Celotvar">Celotvar</option>
-                            <option value="Úlomek">Úlomek</option>
-                            <option value="Fragment">Fragment</option>
-                            <option value="Šperk">Šperk</option>
-                        </select>
-                    </div>
+                    <div class="w-1/2"><label class="text-xs text-gray-500 font-bold uppercase ml-1">Váha (g)</label><input type="number" step="0.01" id="find-weight" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm" placeholder="0.0g"></div>
+                    <div class="w-1/2"><label class="text-xs text-gray-500 font-bold uppercase ml-1">Stav</label><select id="find-state" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm"><option value="Celotvar">Celotvar</option><option value="Úlomek">Úlomek</option><option value="Fragment">Fragment</option><option value="Šperk">Šperk</option></select></div>
                 </div>
-
-                <!-- Dvojřádek: Barva a Tvar -->
                 <div class="flex gap-2">
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 font-bold uppercase ml-1">Barva</label>
-                        <select id="find-color" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm">
-                            <option value="Lahvově zelená">Lahvově zelená</option>
-                            <option value="Olivově zelená">Olivově zelená</option>
-                            <option value="Hnědá">Hnědá</option>
-                            <option value="Jedovatá zelená">Jedovatá zelená</option>
-                            <option value="Černá">Černá</option>
-                            <option value="Modravá">Modravá</option>
-                        </select>
-                    </div>
-                    <div class="w-1/2">
-                        <label class="text-xs text-gray-500 font-bold uppercase ml-1">Tvar</label>
-                        <input type="text" id="find-shape" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm" placeholder="Kapka, disk...">
-                    </div>
+                    <div class="w-1/2"><label class="text-xs text-gray-500 font-bold uppercase ml-1">Barva</label><select id="find-color" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm"><option value="Lahvově zelená">Lahvově zelená</option><option value="Olivově zelená">Olivově zelená</option><option value="Hnědá">Hnědá</option><option value="Jedovatá zelená">Jedovatá zelená</option><option value="Černá">Černá</option><option value="Modravá">Modravá</option></select></div>
+                    <div class="w-1/2"><label class="text-xs text-gray-500 font-bold uppercase ml-1">Tvar</label><input type="text" id="find-shape" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm" placeholder="Kapka, disk..."></div>
                 </div>
-
-                <!-- Komentář -->
-                <div>
-                    <label class="text-xs text-gray-500 font-bold uppercase ml-1">Poznámka</label>
-                    <textarea id="find-note" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm h-16" placeholder="Nalezeno po dešti..."></textarea>
-                </div>
-
-                <!-- Fotka -->
-                <label class="flex items-center justify-center w-full p-3 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 h-24 relative hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                    <div class="flex flex-col items-center"><i class="fas fa-camera text-xl text-gray-400"></i><span class="text-xs text-gray-400 mt-1">Přidat foto</span></div>
-                    <input type="file" id="find-photo" class="hidden" accept="image/*" onchange="previewImage(this)">
-                    <img id="photo-preview" class="absolute inset-0 w-full h-full object-cover rounded-lg hidden" />
-                </label>
+                <div><label class="text-xs text-gray-500 font-bold uppercase ml-1">Poznámka</label><textarea id="find-note" class="w-full p-2 border rounded-lg bg-gray-50 dark:bg-gray-800 dark:border-gray-600 text-sm h-16" placeholder="Nalezeno po dešti..."></textarea></div>
+                <label class="flex items-center justify-center w-full p-3 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 dark:bg-gray-800 h-24 relative hover:bg-gray-100 dark:hover:bg-gray-700 transition"><div class="flex flex-col items-center"><i class="fas fa-camera text-xl text-gray-400"></i><span class="text-xs text-gray-400 mt-1">Přidat foto</span></div><input type="file" id="find-photo" class="hidden" accept="image/*" onchange="previewImage(this)"><img id="photo-preview" class="absolute inset-0 w-full h-full object-cover rounded-lg hidden" /></label>
             </div>
 
             <div class="flex gap-3 mt-4">
@@ -333,7 +310,7 @@
         </div>
     </div>
 
-    <!-- === MODAL: STARTUP & BACKUP === -->
+    <!-- === MODAL: STARTUP === -->
     <div id="startup-modal" class="custom-modal"><div class="modal-box text-center"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-white">Synchronizace</h3><p class="text-sm opacity-70 mb-6">Chcete nahrát data ze zálohy?</p><div class="flex flex-col gap-3"><label class="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow cursor-pointer hover:bg-green-700"><input type="file" onchange="importDataOnStart(this)" class="hidden" accept=".json">Nahrát zálohu</label><button onclick="closeStartupModal()" class="w-full py-3 bg-gray-100 dark:bg-gray-700 font-bold rounded-xl text-gray-600 dark:text-white">Pokračovat (Nová relace)</button></div></div></div>
     <div id="backup-prompt-modal" class="custom-modal"><div class="modal-box text-center"><h3 class="text-lg font-bold mb-2 text-gray-800 dark:text-white">Uloženo</h3><p class="text-sm opacity-70 mb-4 text-gray-600 dark:text-gray-300">Stáhnout aktualizovanou zálohu?</p><div class="flex gap-2"><button onclick="closeModals()" class="flex-1 py-2 bg-gray-100 dark:bg-gray-700 font-bold rounded-lg text-gray-600 dark:text-white">Ne</button><button onclick="exportData(); closeModals()" class="flex-1 py-2 bg-green-600 text-white font-bold rounded-lg shadow">Stáhnout</button></div></div></div>
 
@@ -369,6 +346,13 @@
 
     <div id="page-map" class="page h-full p-0 relative">
         <div id="map-container"><div id="map"></div></div>
+        
+        <!-- RADAR PANEL -->
+        <div id="radar-panel" class="radar-panel hidden">
+            <i class="fas fa-satellite-dish text-green-600"></i>
+            <span id="radar-text">Hledám...</span>
+        </div>
+
         <div id="crosshair" class="map-crosshair"><i class="fas fa-plus crosshair-icon"></i><div class="crosshair-label">ZAMĚŘIT ZDE</div></div>
         <div class="search-overlay"><i class="fas fa-search opacity-50"></i><input type="text" id="map-search" class="search-input" placeholder="Hledat..." onkeyup="filterMap(this.value)"></div>
         <div class="map-controls">
@@ -382,7 +366,13 @@
     <div id="page-list" class="page p-4"><div class="flex justify-between items-center mb-4 sticky top-0 bg-[#ecfdf5] dark:bg-[#111827] py-2 z-20"><div><h2 class="text-2xl font-bold brand-font text-gray-800 dark:text-white">Seznam</h2><div class="text-xs opacity-60">Celkem: <span id="db-total-count">0</span></div></div><div class="flex gap-2"><button onclick="resetDatabase()" class="bg-gray-200 dark:bg-gray-700 text-gray-600 dark:text-gray-300 px-3 py-2 rounded-lg text-xs font-bold border border-gray-300 dark:border-gray-600 hover:bg-gray-300 dark:hover:bg-gray-600" title="Resetovat tovární data"><i class="fas fa-sync-alt"></i></button><button onclick="openNewSiteModal()" class="bg-white dark:bg-gray-800 text-green-700 dark:text-green-400 px-3 py-2 rounded-lg text-xs font-bold border border-green-200 dark:border-green-900 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-700"><i class="fas fa-plus mr-1"></i> Vlastní</button></div></div><select id="filter-select" class="w-full p-3 border rounded-lg mb-2 text-sm bg-white dark:bg-gray-800 dark:border-gray-700" onchange="renderSitesList()"><option value="all">Všechny oblasti</option><option value="safe">Chlum a okolí (Zelená)</option><option value="danger">Besednicko (Červená)</option><option value="west">Západ/Vrábče (Fialová)</option><option value="moravia">Morava (Oranžová)</option><option value="rare">Vodňansko (Modrá)</option></select><input type="text" id="list-search-input" placeholder="Hledat název..." class="w-full p-3 border rounded-lg mb-4 text-sm bg-white dark:bg-gray-800 dark:border-gray-700" onkeyup="renderSitesList()"><div id="sites-list-container" class="space-y-3 pb-20"></div></div>
     
     <div id="page-logbook" class="page p-6">
-        <h2 class="text-2xl font-bold mb-2 brand-font text-gray-800 dark:text-white">Zápisník</h2>
+        <div class="flex justify-between items-center mb-2">
+            <h2 class="text-2xl font-bold brand-font text-gray-800 dark:text-white">Zápisník</h2>
+            <div class="flex gap-1">
+                <button onclick="setLogbookView('list')" id="btn-view-list" class="p-2 rounded bg-green-600 text-white text-xs"><i class="fas fa-list"></i></button>
+                <button onclick="setLogbookView('gallery')" id="btn-view-gallery" class="p-2 rounded bg-gray-200 text-gray-600 text-xs"><i class="fas fa-th-large"></i></button>
+            </div>
+        </div>
         <div id="storage-indicator" class="text-[10px] font-mono text-right mb-4 text-gray-400">Paměť: 0%</div>
         
         <div class="grid grid-cols-2 gap-2 mb-6">
@@ -403,7 +393,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
-        // --- DATA (Zkráceno pro přehlednost, zbytek se doplní z minulých verzí pokud chybí) ---
+        // --- DATA ---
         const regionDefaults={'besednice':{color:"Sytá smaragdová",texture:"Hluboká, ostrohranná (Ježek)",sediment:"Jíly (Slínky)",shape:"Fragmenty, Ježci",qty:"Hloubka: 2-4m v jílech. Vzácný výskyt v hnízdech.",risks:"VYSOKÉ RIZIKO! Nestabilní podloží (závaly). Časté policejní kontroly."},'chlum':{color:"Lahvově zelená, jasná",texture:"Jamkovitá, jemná",sediment:"Písčité štěrky",shape:"Kapky, Celotvary, Placky",qty:"Hloubka: 0.5-3m v písčitých štěrcích. Bohaté na menší kusy.",risks:"Respektujte osetá pole a majitele pozemků."},'west':{color:"Hnědo-zelená",texture:"Ohlazená, vrstvená",sediment:"Vysoké terasy (Štěrky)",shape:"Ploché disky, Střepy",qty:"Povrchový sběr na ornicích (jaro/podzim). Terasy Vltavy.",risks:"Běžná. Pozor na soukromé zahrady."},'moravia':{color:"Olivová až Černohnědá",texture:"Matná, ohlazená",sediment:"Štěrkopísky",shape:"Koule, Valouny, Velké kusy",qty:"Hloubka: Oranice až 2m štěrky. Nálezy ojedinělé, ale velké.",risks:"Velké plochy polí. Nutný souhlas na soukromém."},'rare':{color:"Bledě zelená, Vodová, Modravá",texture:"Sametová, skelná",sediment:"Říční sedimenty",shape:"Valounky, Kapky",qty:"Pískovny a říční sedimenty. Hloubka variabilní.",risks:"Zákaz vstupu do aktivních pískoven. Nebezpečí sesuvu."},'cheb':{color:"Olivová",texture:"Ohlazená",sediment:"Třetihorní sedimenty",shape:"Valouny",qty:"Třetihorní sedimenty, povrchové výskyty.",risks:"Běžná."}};
         const regionData={'besednice':{title:"Oblast Besednice",subtitle:"Legendární Ježci",char:"Besednice je světovým unikátem. Zdejší vltavíny se vyznačují extrémně hlubokou a jemnou skulptací ('ježek').",geo:"Vltavíny se nacházejí v jílovitých sedimentech (slínky), které je dokonale zakonzervovaly bez pohybu.",hist:"Oblast zažila v 90. letech masivní nelegální těžbu. Většina míst je dnes rekultivována." },'chlum':{title:"Chlum a Ločenice",subtitle:"Nejbohatší naleziště",char:"Oblast Chlumu dává světu největší množství vltavínů. Typická je jasně 'lahvově' zelená barva.",geo:"Uloženy v písčitých štěrcích a ornicích. Díky transportu jsou mírně ohlazenější než ježci.",hist:"Systematický sběr probíhá přes 100 let. Dříve prodej do továren na bižuterii." },'west':{title:"Západ (Vrábče/Křemže)",subtitle:"Ploché a vrstvené",char:"Specifická skupina. Vltavíny bývají ploché, diskovité, s viditelným vrstvením skla. Barva hnědo-zelená.",geo:"Vázány na staré terasy Vltavy ve vysokých polohách (Vrábče) a kotliny pod Kletí.",hist:"Lokalita Nová Hospoda je slavná, ale dnes již z velké části zastavěná." },'rare':{title:"Vodňansko a Písecko",subtitle:"Vodové vltavíny",char:"Vltavíny urazily dlouhou cestu vodou. Jsou ohlazené, matné ('sametové') a mají bledě zelenou až modravou barvu.",geo:"Vyskytují se v sedimentech řek Blanice a Otavy, často v pískovnách.",hist:"Nálezy jsou vzácné, nikdy zde neprobíhala masová těžba." },'moravia':{title:"Morava",subtitle:"Velké a tmavé kusy",char:"Moravské vltavíny jsou větší, mají tvar koulí nebo valounů a jsou výrazně tmavší (hnědozelené až černé).",geo:"Nacházejí se ve starých štěrkopískových terasách řek Jihlavy a Oslavy.",hist:"Lokality jako Slavice nebo Dukovany jsou světoznámé výskytem velkých kusů." },'cheb':{title:"Ostatní / Chebsko",subtitle:"Vltavíny z jiných oblastí",char:"Naleziště mimo hlavní jihočeskou a moravskou oblast.",geo:"Třetihorní sedimenty, často přeplavené.",hist:"Menší či historické lokality."}};
         const defaultSites=[{name:"Chlum - Sever",lat:48.8180,lng:14.5620,type:"safe",short:"Hlavní pole.",desc:"Centrální naleziště.",color:"Lahvově zelená",texture:"Jemná skulptace",sediment:"Štěrkopísky",shape:"Kapky, Disky"},{name:"Besednice - Ježkovna",lat:48.7945,lng:14.5530,type:"danger",short:"Slavná lokalita.",desc:"Zdroj nejkrásnějších vltavínů světa.",color:"Smaragdová",texture:"Extrémní (Ježek)",sediment:"Slínky",shape:"Fragmenty"},{name:"Vrábče - Nová Hospoda",lat:48.9120,lng:14.3750,type:"west",short:"Klasika.",desc:"Naleziště vrstvených vltavínů.",color:"Hnědozelená",texture:"Vrstvená",sediment:"Terasy",shape:"Ploché disky"},{name:"Slavice",lat:49.2020,lng:15.8950,type:"moravia",short:"Třebíčsko.",desc:"Velké moravské vltavíny.",color:"Hnědá",texture:"Ohlazená",sediment:"Štěrk",shape:"Koule"},{name:"Radomilice",lat:49.1350,lng:14.2550,type:"rare",short:"Vodňansko.",desc:"Vodově zbarvené unikáty.",color:"Bledě modrozelená",texture:"Sametová",sediment:"Písky",shape:"Valounky"},{name:"Byňov",lat:48.8350,lng:14.8100,type:"safe",short:"Štěrkopísky."},{name:"Jakule",lat:48.8250,lng:14.7900,type:"safe",short:"U Byňova."},{name:"Šalmanovice",lat:48.8600,lng:14.8300,type:"safe",short:"Hluboká těžba."},{name:"Jiterní Ves",lat:48.8400,lng:14.8000,type:"safe",short:"Novohradsko."},{name:"Petříkov",lat:48.8500,lng:14.7500,type:"safe",short:"U Jílovic."},{name:"Jílovice",lat:48.8900,lng:14.7300,type:"safe",short:"Třeboňsko."},{name:"Nepomuk",lat:48.8700,lng:14.7800,type:"safe",short:"U Jílovic."},{name:"Těšínov",lat:48.8600,lng:14.7600,type:"safe",short:"Novohradsko."},{name:"Hluboká u Borovan",lat:48.9100,lng:14.7000,type:"safe",short:"Borovansko."},{name:"Keblany",lat:48.8100,lng:14.6000,type:"safe",short:"Lesy."},{name:"Mohuřice",lat:48.8000,lng:14.6100,type:"safe",short:"Východ."},{name:"Slavče u Trhových Svinů",lat:48.7920,lng:14.6350,type:"safe",short:"Okraj."},{name:"Todně",lat:48.8500,lng:14.5600,type:"safe",short:"Sever."},{name:"Něchov",lat:48.8400,lng:14.5500,type:"safe",short:"Silnice."},{name:"Dobrkovská Lhotka",lat:48.7800,lng:14.6100,type:"safe",short:"Východ."},{name:"Soběnov",lat:48.7600,lng:14.5400,type:"safe",short:"Jih."},{name:"Daleké Popelice",lat:48.7500,lng:14.5600,type:"safe",short:"Jih."},{name:"Velké Skaliny",lat:48.7300,lng:14.5300,type:"safe",short:"Kaplicko."},{name:"Chlum - U hřbitova",lat:48.8120,lng:14.5580,type:"safe",short:"Klasika."},{name:"Velký Chlum",lat:48.8250,lng:14.5300,type:"safe",short:"Les."},{name:"Malý Chlum",lat:48.8200,lng:14.5450,type:"safe",short:"Kopec."},{name:"Chlum - Jih",lat:48.8050,lng:14.5650,type:"safe",short:"Spojnice."},{name:"Ločenice",lat:48.7750,lng:14.5350,type:"safe",short:"Jih.",desc:"Lesklé."},{name:"Ločenice - Chlumek",lat:48.7790,lng:14.5450,type:"safe",short:"Východ."},{name:"Nesměň - Cihelna",lat:48.8320,lng:14.5850,type:"safe",short:"Pískovna.",desc:"Matné."},{name:"Nesměň - Pole",lat:48.8280,lng:14.5900,type:"safe",short:"Okolí."},{name:"Chodeč",lat:48.8300,lng:14.6100,type:"safe",short:"Východ."},{name:"Svatý Jan n/M",lat:48.8400,lng:14.5300,type:"safe",short:"Sever."},{name:"Sedlo",lat:48.8300,lng:14.5100,type:"safe",short:"Západ."},{name:"Ledenice",lat:48.9300,lng:14.6500,type:"safe",short:"Vzácné."},{name:"Borovany",lat:48.8900,lng:14.6400,type:"safe",short:"Východ."},{name:"Suchdol n/L",lat:48.8800,lng:14.8700,type:"safe",short:"Pískovny."},{name:"Chlum u Třeboně",lat:48.9600,lng:14.9300,type:"safe",short:"Třeboňsko."},{name:"Majdalena",lat:48.9500,lng:14.8600,type:"safe",short:"Pískovny."},{name:"Cep",lat:48.9200,lng:14.8800,type:"safe",short:"Pískovny."},{name:"Hamr",lat:48.9400,lng:14.9000,type:"safe",short:"Pískovny."},{name:"Klikov",lat:48.9100,lng:14.9200,type:"safe",short:"Pískovny."},{name:"Tušť",lat:48.8900,lng:14.9500,type:"safe",short:"Hranice."},{name:"Krasejovka",lat:48.8600,lng:14.4800,type:"safe",short:"Staré štěrky."},{name:"Dolní Chrášťany",lat:49.0500,lng:14.2200,type:"safe",short:"Sever."},{name:"Lhenice",lat:48.9950,lng:14.1550,type:"safe",short:"Sady."},{name:"Třebanice",lat:49.0100,lng:14.1300,type:"safe",short:"Velmi vzácné."},{name:"Hrbov",lat:49.0300,lng:14.1600,type:"safe",short:"Netolice."},{name:"Brusná",lat:49.0350,lng:14.1500,type:"safe",short:"Zelenkavé."},{name:"Chmelná",lat:48.9800,lng:14.1800,type:"safe",short:"Křemže."},{name:"Zbytiny",lat:48.9500,lng:14.0000,type:"safe",short:"Prachaticko."},{name:"Věžovatá Pláně",lat:48.7800,lng:14.4200,type:"safe",short:"Krumlovsko."},{name:"Pašinovice",lat:48.8750,lng:14.5200,type:"safe",short:"Sever."},{name:"Komařice",lat:48.8650,lng:14.5400,type:"safe",short:"Římov."},{name:"Stradov",lat:48.8550,lng:14.5000,type:"safe",short:"Kaplicko."},{name:"Rankov",lat:48.8600,lng:14.6500,type:"safe",short:"Svinensko."},{name:"Otěvěk",lat:48.8450,lng:14.6300,type:"safe",short:"Svinensko."},{name:"Čeřejov",lat:48.8500,lng:14.6400,type:"safe",short:"Svinensko."},{name:"Hrádek",lat:48.8300,lng:14.6600,type:"safe",short:"Svinensko."},{name:"Rejta",lat:48.8200,lng:14.6800,type:"safe",short:"Jih Svin."},{name:"Pěčín",lat:48.8250,lng:14.7000,type:"safe",short:"Svinensko."},{name:"Boršíkov",lat:48.8150,lng:14.6900,type:"safe",short:"Svinensko."},{name:"Čížkrajice",lat:48.8050,lng:14.6500,type:"safe",short:"Jih."},{name:"Klažary",lat:48.7950,lng:14.6600,type:"safe",short:"Podhůří."},{name:"Žumberk",lat:48.7900,lng:14.6800,type:"safe",short:"Tvrz."},{name:"Kamenná",lat:48.7850,lng:14.6600,type:"safe",short:"Podhůří."},{name:"Kondrač",lat:48.7750,lng:14.6500,type:"safe",short:"Podhůří."},{name:"Chvalkov",lat:48.7700,lng:14.6400,type:"safe",short:"Podhůří."},{name:"Březí",lat:48.8800,lng:14.4500,type:"safe",short:"Křemžsko."},{name:"Záboří",lat:48.9850,lng:14.2600,type:"safe",short:"Holašovice."},{name:"Nová Ves",lat:48.9550,lng:14.2500,type:"safe",short:"Křemžsko."},{name:"Brloh",lat:48.9300,lng:14.2100,type:"safe",short:"Křemžsko."},{name:"Besednice - Stoh",lat:48.7880,lng:14.5450,type:"danger",short:"Pod Ježkovnou."},{name:"Besednice - Cihelna",lat:48.7980,lng:14.5480,type:"danger",short:"Sever."},{name:"Besednice - Stavba",lat:48.7920,lng:14.5550,type:"danger",short:"Obec."},{name:"Besednice - Jih",lat:48.7850,lng:14.5500,type:"danger",short:"Směr Dobrkovská."},{name:"Besednice - Les",lat:48.7900,lng:14.5600,type:"danger",short:"Východ."},{name:"Malče",lat:48.7800,lng:14.5200,type:"danger",short:"Západ."},{name:"Smrhov",lat:48.7700,lng:14.5200,type:"danger",short:"Jih."},{name:"Porešín",lat:48.7600,lng:14.5100,type:"danger",short:"Pořešín."},{name:"Vrábče - Zastávka",lat:48.9050,lng:14.3600,type:"west",short:"Koleje."},{name:"Mříč",lat:48.9150,lng:14.3200,type:"west",short:"Křemže."},{name:"Koroseky",lat:48.9220,lng:14.3550,type:"west",short:"Bohaté."},{name:"Kroclov",lat:48.9000,lng:14.3300,type:"west",short:"Západ."},{name:"Habří",lat:48.9550,lng:14.3250,type:"west",short:"Pod Kletí."},{name:"Lipí",lat:48.9450,lng:14.3100,type:"west",short:"Západ."},{name:"Kvítkovice",lat:48.9600,lng:14.3000,type:"west",short:"Okraj."},{name:"Jankov",lat:48.9720,lng:14.2850,type:"west",short:"UNESCO."},{name:"Holašovice",lat:48.9680,lng:14.2700,type:"west",short:"UNESCO."},{name:"Záluží",lat:48.9300,lng:14.3400,type:"west",short:"Střed."},{name:"Čertova Stěna",lat:48.6300,lng:14.2700,type:"west",short:"Geologie.",desc:"Štěrky.",risks:"NPR Zákaz!"},{name:"Kamenný Újezd",lat:48.9000,lng:14.4500,type:"west",short:"Budějovice."},{name:"Boršov n/Vlt",lat:48.9200,lng:14.4300,type:"west",short:"Řeka."},{name:"Čakov",lat:48.9800,lng:14.3000,type:"west",short:"Sever Jankova."},{name:"Bohouškovice",lat:48.9300,lng:14.2800,type:"west",short:"Křemže."},{name:"Slavče (Křemže)",lat:48.9200,lng:14.3000,type:"west",short:"Pod Kletí."},{name:"Rojšín",lat:48.9100,lng:14.2200,type:"west",short:"Křemže."},{name:"Závraty",lat:48.9250,lng:14.3800,type:"west",short:"Vrábče."},{name:"Kaliště u Lipí",lat:48.9500,lng:14.3300,type:"west",short:"Lipí."},{name:"Hradce",lat:48.9350,lng:14.3200,type:"west",short:"Lipí."},{name:"Chmelná - Východ",lat:48.9820,lng:14.1900,type:"west",short:"Křemže."},{name:"Loučej",lat:48.9150,lng:14.2900,type:"west",short:"Křemže."},{name:"Stupná",lat:48.9050,lng:14.2800,type:"west",short:"Křemže."},{name:"Chlumeček",lat:48.9250,lng:14.2900,type:"west",short:"Křemže."},{name:"Malovice",lat:49.0850,lng:14.2050,type:"rare",short:"Vodové."},{name:"Malešice",lat:49.1100,lng:14.2600,type:"rare",short:"Vodňansko."},{name:"Černěves",lat:49.1000,lng:14.2300,type:"rare",short:"Radomilice."},{name:"Záblatí",lat:49.1200,lng:14.1800,type:"rare",short:"Vodňansko."},{name:"Strpí",lat:49.1200,lng:14.2400,type:"rare",short:"Pískovny."},{name:"Protivín",lat:49.1900,lng:14.2200,type:"rare",short:"Sever."},{name:"Týn n/Vlt",lat:49.2200,lng:14.4500,type:"rare",short:"Depot."},{name:"Koloděje",lat:49.2400,lng:14.4200,type:"rare",short:"Soutok."},{name:"Písek",lat:49.3000,lng:14.1500,type:"rare",short:"Nejzazší."},{name:"Březí u Týna",lat:49.2000,lng:14.3800,type:"rare",short:"Týnsko."},{name:"Všemyslice",lat:49.2100,lng:14.3500,type:"rare",short:"Týnsko."},{name:"Chlumec",lat:49.1500,lng:14.3800,type:"rare",short:"Purkarec."},{name:"Temelín",lat:49.1700,lng:14.3500,type:"rare",short:"Elektrárna."},{name:"Třebomyslice",lat:49.1800,lng:13.9800,type:"rare",short:"Horažďovice."},{name:"Netěchovice",lat:49.2300,lng:14.4000,type:"rare",short:"Týnsko."},{name:"Nuzice",lat:49.2600,lng:14.4600,type:"rare",short:"Bechyně."},{name:"Jehnědno",lat:49.2500,lng:14.2700,type:"rare",short:"Písecko."},{name:"Zliv",lat:49.0600,lng:14.3600,type:"rare",short:"Pánve."},{name:"Pašice",lat:49.0700,lng:14.3300,type:"rare",short:"U Zlivi."},{name:"Poněšice",lat:49.1000,lng:14.4600,type:"rare",short:"Hluboká."},{name:"Hluboká n/Vlt",lat:49.0500,lng:14.4400,type:"rare",short:"Okolí."},{name:"Hrdějovice",lat:49.0200,lng:14.4600,type:"rare",short:"Kaolínka."},{name:"Úsilné",lat:49.0100,lng:14.5100,type:"rare",short:"Sever ČB."},{name:"Lišov",lat:49.0100,lng:14.6100,type:"rare",short:"Východ."},{name:"Dívčice",lat:49.1000,lng:14.3000,type:"rare",short:"Zlivsko."},{name:"Nákří",lat:49.1200,lng:14.3200,type:"rare",short:"Pánve."},{name:"Olešník",lat:49.1300,lng:14.3600,type:"rare",short:"Sever."},{name:"Mydlovary",lat:49.0900,lng:14.3300,type:"rare",short:"Zlivsko."},{name:"Dubenec",lat:49.0700,lng:14.2800,type:"rare",short:"Dívčice."},{name:"Číčenice",lat:49.1600,lng:14.2300,type:"rare",short:"Vodňansko."},{name:"Újezdec",lat:49.1800,lng:14.2000,type:"rare",short:"Vodňansko."},{name:"Myšenec",lat:49.2100,lng:14.1800,type:"rare",short:"Protivín."},{name:"Žďár",lat:49.2300,lng:14.1600,type:"rare",short:"Protivín."},{name:"Hněvkovice",lat:49.2000,lng:14.4000,type:"rare",short:"Týnsko."},{name:"Lhota pod Horami",lat:49.2100,lng:14.3300,type:"rare",short:"Temelín."},{name:"Sedlec",lat:49.0800,lng:14.2600,type:"rare",short:"Zliv."},{name:"Plástovice",lat:49.0750,lng:14.2900,type:"rare",short:"Zliv."},{name:"Dukovany",lat:49.0750,lng:16.1950,type:"moravia",short:"Elektrárna.",risks:"Průmysl."},{name:"Kožichovice",lat:49.2080,lng:15.9250,type:"moravia",short:"Třebíč."},{name:"Terůvky",lat:49.2150,lng:15.8600,type:"moravia",short:"Třebíč."},{name:"Štěpánovice",lat:49.1700,lng:15.9800,type:"moravia",short:"Klasika."},{name:"Skryje",lat:49.0900,lng:16.1500,type:"moravia",short:"Dukovany."},{name:"Oslavany",lat:49.1200,lng:16.3300,type:"moravia",short:"Východ."},{name:"Kuchařovice",lat:48.8800,lng:16.0800,type:"moravia",short:"Znojmo."},{name:"Suchohrdly",lat:48.8700,lng:16.0700,type:"moravia",short:"Znojmo."},{name:"Dalešice",lat:49.1300,lng:16.0800,type:"moravia",short:"Přehrada."},{name:"Mohelno",lat:49.1100,lng:16.1900,type:"moravia",short:"Step.",risks:"NPR Zákaz."},{name:"Lhánice",lat:49.1000,lng:16.2200,type:"moravia",short:"Okolí Mohelna."},{name:"Senorady",lat:49.1200,lng:16.2400,type:"moravia",short:"Oslavansko."},{name:"Ivančice",lat:49.1000,lng:16.3700,type:"moravia",short:"Východ."},{name:"Mikulovice",lat:49.1600,lng:15.9300,type:"moravia",short:"Třebíčsko."},{name:"Kojetice",lat:49.1600,lng:15.8200,type:"moravia",short:"Západ."},{name:"Třebenice",lat:49.1500,lng:16.0300,type:"moravia",short:"Dalešice."},{name:"Valdice",lat:49.1700,lng:16.0000,type:"moravia",short:"Náměšť."},{name:"Slavětice",lat:49.0900,lng:16.1200,type:"moravia",short:"Dukovany."},{name:"Hrotovice",lat:49.1000,lng:16.0500,type:"moravia",short:"Třebíčsko."},{name:"Rouchovany",lat:49.0700,lng:16.1000,type:"moravia",short:"Dukovany."},{name:"Jaroměřice n/R",lat:49.0900,lng:15.8900,type:"moravia",short:"Jih."},{name:"Výčapy",lat:49.1800,lng:15.8800,type:"moravia",short:"Třebíč."},{name:"Střížov",lat:49.1900,lng:15.8500,type:"moravia",short:"Třebíč."},{name:"Bojanovice",lat:48.9600,lng:16.0200,type:"moravia",short:"Jih."},{name:"Citonice",lat:48.8800,lng:15.9800,type:"moravia",short:"Znojemsko."},{name:"Milokošť",lat:48.9200,lng:16.0000,type:"moravia",short:"Jih."},{name:"Horní Kounice",lat:49.0200,lng:16.1500,type:"moravia",short:"Sever Znojma."},{name:"Čermákovice",lat:49.0100,lng:16.1800,type:"moravia",short:"Sever Znojma."},{name:"Vémyslice",lat:49.0000,lng:16.2200,type:"moravia",short:"Sever Znojma."},{name:"Kuroslepy",lat:49.1400,lng:16.2500,type:"moravia",short:"Oslava."},{name:"Biskoupky",lat:49.1000,lng:16.2800,type:"moravia",short:"Oslava."},{name:"Hrubšice",lat:49.0900,lng:16.3000,type:"moravia",short:"Oslava."},{name:"Řeznovice",lat:49.0800,lng:16.3200,type:"moravia",short:"Oslava."},{name:"Tulešice",lat:49.0300,lng:16.1800,type:"moravia",short:"Znojemsko."},{name:"Dobřínsko",lat:49.0500,lng:16.2700,type:"moravia",short:"Znojemsko."},{name:"Jamolice",lat:49.0700,lng:16.2500,type:"moravia",short:"Znojemsko."},{name:"Dalenice",lat:49.1100,lng:16.1000,type:"moravia",short:"Dukovany."},{name:"Klučov",lat:49.1750,lng:15.9400,type:"moravia",short:"Třebíč."},{name:"Petrůvky",lat:49.1950,lng:15.9000,type:"moravia",short:"Třebíč."},{name:"Okříšky",lat:49.2450,lng:15.7700,type:"moravia",short:"Sever."},{name:"Číměř",lat:49.1850,lng:16.0200,type:"moravia",short:"Dalešice."},{name:"Stropešín",lat:49.1450,lng:16.0700,type:"moravia",short:"Dalešice."},{name:"Hartvíkovice",lat:49.1650,lng:16.0800,type:"moravia",short:"Dalešice."},{name:"Popůvky",lat:49.1750,lng:16.1000,type:"moravia",short:"Dalešice."},{name:"Kramolín",lat:49.1350,lng:16.1300,type:"moravia",short:"Dalešice."},{name:"Březník",lat:49.1550,lng:16.2000,type:"moravia",short:"Oslava."},{name:"Ketkovice",lat:49.1600,lng:16.2600,type:"moravia",short:"Oslava."},{name:"Čučice",lat:49.1450,lng:16.2800,type:"moravia",short:"Oslava."},{name:"Nový Šaldorf",lat:48.8350,lng:16.0600,type:"moravia",short:"Znojmo."},{name:"Přímětice",lat:48.8850,lng:16.0400,type:"moravia",short:"Znojmo."},{name:"Hluboké Mašůvky",lat:48.9150,lng:16.0300,type:"moravia",short:"Znojmo."},{name:"Višňové",lat:48.9850,lng:16.1400,type:"moravia",short:"Znojmo."},{name:"Dřenice",lat:50.0700,lng:12.4300,type:"cheb",short:"Chebsko."},{name:"Skalná",lat:50.1700,lng:12.3600,type:"cheb",short:"Vildštejn."},{name:"Drážďany (GER)",lat:51.0500,lng:13.7300,type:"cheb",short:"Lužice."},{name:"Radessen (AUT)",lat:48.8000,lng:15.1200,type:"cheb",short:"Rakousko."},{name:"Kobylisy (Praha)",lat:50.1200,lng:14.4500,type:"cheb",short:"Štěrky Vltavy.",desc:"Historický nález.",risks:"Město."},{name:"Horní Bříza",lat:49.8300,lng:13.3600,type:"cheb",short:"Plzeňsko."}];
@@ -413,6 +403,7 @@
         let currentTheme = localStorage.getItem('theme') || 'system';
         let activeLocSource = 'gps'; // 'gps' or 'cross'
         let isRulerActive = false; let rulerStartMarker = null; let rulerLine = null; let rulerPopup = null;
+        let logbookViewMode = 'list'; // 'list' or 'gallery'
 
         document.addEventListener("DOMContentLoaded", () => { loadSites(); applyTheme(); document.getElementById('startup-modal').classList.add('open'); });
 
@@ -442,38 +433,70 @@
             osmLayer.addTo(map);
             refreshMarkers();
             map.on('movestart', () => { if(!userMarker) document.getElementById('crosshair').classList.add('visible'); });
-            map.on('move', updateLocationPreview);
+            map.on('move', () => {
+                updateLocationPreview();
+                updateRadar(); // Aktualizace radaru při pohybu mapy
+            });
             
             // Ruler logic (Měření)
             map.on('click', (e) => {
                 if (isRulerActive) {
                     if (!rulerStartMarker) {
-                        // Start measurement
                         rulerStartMarker = L.circleMarker(e.latlng, { color: 'orange', radius: 5 }).addTo(map);
                     } else {
-                        // Finish measurement
                         const start = rulerStartMarker.getLatLng();
                         const end = e.latlng;
-                        const dist = map.distance(start, end); // meters
-                        
+                        const dist = map.distance(start, end); 
                         if (rulerLine) map.removeLayer(rulerLine);
                         if (rulerPopup) map.removeLayer(rulerPopup);
-
                         rulerLine = L.polyline([start, end], { color: 'orange', weight: 3, dashArray: '5, 10' }).addTo(map);
-                        
                         let distStr = dist > 1000 ? (dist/1000).toFixed(2) + ' km' : Math.round(dist) + ' m';
-                        
-                        rulerPopup = L.popup()
-                            .setLatLng(end)
-                            .setContent(`<b>Vzdálenost:</b> ${distStr}`)
-                            .openOn(map);
-
-                        // Reset for next measurement
+                        rulerPopup = L.popup().setLatLng(end).setContent(`<b>Vzdálenost:</b> ${distStr}`).openOn(map);
                         map.removeLayer(rulerStartMarker);
                         rulerStartMarker = null;
                     }
                 }
             });
+        }
+
+        // --- RADAR LOGIC (NOVÉ) ---
+        function updateRadar() {
+            const radarPanel = document.getElementById('radar-panel');
+            const radarText = document.getElementById('radar-text');
+            
+            // Pokud je modal otevřený, radar neaktualizujeme (šetříme výkon)
+            if(document.querySelector('.custom-modal.open')) {
+               radarPanel.classList.add('hidden'); return;
+            } else {
+               radarPanel.classList.remove('hidden');
+            }
+
+            let currentPos;
+            if (userMarker) {
+                currentPos = userMarker.getLatLng();
+            } else {
+                currentPos = map.getCenter();
+            }
+
+            // Najít nejbližší lokalitu
+            let nearestDist = Infinity;
+            let nearestName = "";
+
+            sites.forEach(s => {
+                const dist = map.distance(currentPos, [s.lat, s.lng]);
+                if (dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestName = s.name;
+                }
+            });
+
+            let distStr = nearestDist > 1000 ? (nearestDist/1000).toFixed(1) + 'km' : Math.round(nearestDist) + 'm';
+            
+            // Zkrátit název lokality pro zobrazení
+            let shortName = nearestName.split(' - ')[0];
+            if(shortName.length > 15) shortName = shortName.substring(0, 12) + '...';
+
+            radarText.innerHTML = `<span class="radar-dist">${distStr}</span> ${shortName}`;
         }
 
         function toggleRuler() {
@@ -519,6 +542,7 @@
                 map.setView([lat, lng], 16);
                 statusEl.innerText = "GPS: " + lat.toFixed(5) + ", " + lng.toFixed(5);
                 updateLocationPreview(); 
+                updateRadar(); // Update radar on GPS fix
             }, (error) => { alert("Chyba GPS."); document.getElementById('crosshair').classList.add('visible'); statusEl.innerText = "GPS selhala."; }, { enableHighAccuracy: true, timeout: 10000 });
         }
 
@@ -532,7 +556,7 @@
         function switchTab(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active')); document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
             document.getElementById('page-'+id).classList.add('active'); document.getElementById('nav-'+id).classList.add('active');
-            if(id==='map') { setTimeout(()=>map.invalidateSize(), 100); if(!userMarker) document.getElementById('crosshair').classList.add('visible'); }
+            if(id==='map') { setTimeout(()=>map.invalidateSize(), 100); if(!userMarker) document.getElementById('crosshair').classList.add('visible'); updateRadar(); }
             else document.getElementById('crosshair').classList.remove('visible');
             if(id==='logbook') renderLogbook();
         }
@@ -583,7 +607,6 @@
         function getFinds() { return JSON.parse(localStorage.getItem('vltavinLovecFinds')) || []; }
         function saveFinds(d) { localStorage.setItem('vltavinLovecFinds', JSON.stringify(d)); renderLogbook(); refreshMarkers(); }
         
-        // Location Source Toggle Logic
         function toggleLocationSource(type) {
             activeLocSource = type;
             const btnGps = document.getElementById('btn-loc-gps');
@@ -662,15 +685,51 @@
         function showFindOnMap(id) { const f = getFinds().find(x => x.id === id); if (f) { switchTab('map'); setTimeout(() => { map.setView([f.lat, f.lng], 18); }, 300); } }
         function updateStorageIndicator() { const used = JSON.stringify(localStorage).length; const limit = 5 * 1024 * 1024; const percent = Math.min(100, Math.round((used / limit) * 100)); const el = document.getElementById('storage-indicator'); el.innerText = `Využití paměti: ${percent}%`; if(percent > 90) el.className = "text-[10px] font-mono text-right mb-4 text-red-500 font-bold"; else el.className = "text-[10px] font-mono text-right mb-4 text-gray-400"; }
 
+        // --- LOGBOOK VIEW MODES ---
+        function setLogbookView(mode) {
+            logbookViewMode = mode;
+            const btnList = document.getElementById('btn-view-list');
+            const btnGallery = document.getElementById('btn-view-gallery');
+            
+            if (mode === 'list') {
+                btnList.className = "p-2 rounded bg-green-600 text-white text-xs";
+                btnGallery.className = "p-2 rounded bg-gray-200 text-gray-600 text-xs dark:bg-gray-700 dark:text-gray-400";
+            } else {
+                btnGallery.className = "p-2 rounded bg-green-600 text-white text-xs";
+                btnList.className = "p-2 rounded bg-gray-200 text-gray-600 text-xs dark:bg-gray-700 dark:text-gray-400";
+            }
+            renderLogbook();
+        }
+
         function renderLogbook() {
             const f = getFinds(); document.getElementById('total-finds-home').innerText = f.length;
             const totalW = f.reduce((sum, i) => sum + (parseFloat(i.weight)||0), 0).toFixed(2); document.getElementById('total-weight-home').innerText = totalW + 'g'; if(f.length>0) document.getElementById('last-find-date').innerText = f[f.length-1].date;
             updateStorageIndicator();
-            const l = document.getElementById('logbook-list'); l.innerHTML = f.length ? '' : '<div class="text-center opacity-50 py-10">Zatím žádné nálezy.</div>';
-            f.sort((a,b)=>b.id-a.id).forEach(i => {
-                const imgTag = i.image ? `<img src="${i.image}" class="w-16 h-16 rounded object-cover border mr-3 bg-black">` : '<div class="w-16 h-16 bg-gray-100 rounded mr-3 flex items-center justify-center text-gray-300"><i class="fas fa-image"></i></div>';
-                l.innerHTML += `<div class="bg-white dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700 shadow-sm mb-3 flex justify-between items-start"><div class="flex items-start w-full">${imgTag}<div class="w-full"><div class="flex justify-between"><div class="font-bold text-green-700 dark:text-green-400">${i.customName || 'Nález'}</div><div class="text-xs text-gray-400">${i.date}</div></div><div class="text-xs font-bold text-gray-800 dark:text-white mt-1">${i.weight ? i.weight+'g' : '-'} • ${i.state || ''} • ${i.color || ''}</div><div class="text-xs opacity-60 mt-1 italic line-clamp-2">${i.note || 'Bez poznámky'}</div><div class="text-[10px] text-blue-500 mt-2 font-mono">GPS: ${i.lat.toFixed(5)}, ${i.lng.toFixed(5)}</div></div></div><div class="flex flex-col gap-2 ml-2"><button onclick="showFindOnMap(${i.id})" class="text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 w-8 h-8 rounded flex items-center justify-center" title="Ukázat na mapě"><i class="fas fa-crosshairs"></i></button><button onclick="openAddModal(${i.id})" class="text-blue-500 bg-blue-50 dark:bg-blue-900/30 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-edit"></i></button><button onclick="deleteFind(${i.id})" class="text-red-500 bg-red-50 dark:bg-red-900/30 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-trash"></i></button></div></div>`;
-            });
+            
+            const l = document.getElementById('logbook-list');
+            l.innerHTML = f.length ? '' : '<div class="text-center opacity-50 py-10">Zatím žádné nálezy.</div>';
+            
+            if (logbookViewMode === 'list') {
+                // LIST VIEW (Původní zobrazení)
+                l.className = "space-y-3 pb-20";
+                f.sort((a,b)=>b.id-a.id).forEach(i => {
+                    const imgTag = i.image ? `<img src="${i.image}" class="w-16 h-16 rounded object-cover border mr-3 bg-black">` : '<div class="w-16 h-16 bg-gray-100 rounded mr-3 flex items-center justify-center text-gray-300"><i class="fas fa-image"></i></div>';
+                    l.innerHTML += `<div class="bg-white dark:bg-gray-800 p-3 rounded-lg border dark:border-gray-700 shadow-sm mb-3 flex justify-between items-start"><div class="flex items-start w-full">${imgTag}<div class="w-full"><div class="flex justify-between"><div class="font-bold text-green-700 dark:text-green-400">${i.customName || 'Nález'}</div><div class="text-xs text-gray-400">${i.date}</div></div><div class="text-xs font-bold text-gray-800 dark:text-white mt-1">${i.weight ? i.weight+'g' : '-'} • ${i.state || ''} • ${i.color || ''}</div><div class="text-xs opacity-60 mt-1 italic line-clamp-2">${i.note || 'Bez poznámky'}</div><div class="text-[10px] text-blue-500 mt-2 font-mono">GPS: ${i.lat.toFixed(5)}, ${i.lng.toFixed(5)}</div></div></div><div class="flex flex-col gap-2 ml-2"><button onclick="showFindOnMap(${i.id})" class="text-yellow-600 bg-yellow-50 dark:bg-yellow-900/30 w-8 h-8 rounded flex items-center justify-center" title="Ukázat na mapě"><i class="fas fa-crosshairs"></i></button><button onclick="openAddModal(${i.id})" class="text-blue-500 bg-blue-50 dark:bg-blue-900/30 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-edit"></i></button><button onclick="deleteFind(${i.id})" class="text-red-500 bg-red-50 dark:bg-red-900/30 w-8 h-8 rounded flex items-center justify-center"><i class="fas fa-trash"></i></button></div></div>`;
+                });
+            } else {
+                // GALLERY VIEW (Nové zobrazení)
+                l.className = "grid grid-cols-3 gap-2 pb-20";
+                f.sort((a,b)=>b.id-a.id).forEach(i => {
+                    const imgSrc = i.image || 'https://via.placeholder.com/150?text=No+Img';
+                    l.innerHTML += `
+                    <div class="relative aspect-square rounded-lg overflow-hidden border dark:border-gray-700 bg-gray-100 cursor-pointer" onclick="openAddModal(${i.id})">
+                        <img src="${imgSrc}" class="w-full h-full object-cover">
+                        <div class="absolute bottom-0 left-0 w-full bg-black/60 p-1 text-[10px] text-white truncate text-center">
+                            ${i.weight ? i.weight+'g' : i.customName}
+                        </div>
+                    </div>`;
+                });
+            }
         }
         
         function previewImage(i) { if(i.files && i.files[0]) { const r = new FileReader(); r.onload = e => { const img = new Image(); img.src = e.target.result; img.onload = () => { const c = document.createElement('canvas'); const x = c.getContext('2d'); const m = 800; let w=img.width; let h=img.height; if(w>m) { h*=m/w; w=m; } c.width=w; c.height=h; x.drawImage(img,0,0,w,h); compressedImage = c.toDataURL('image/jpeg', 0.5); document.getElementById('photo-preview').src=compressedImage; document.getElementById('photo-preview').classList.remove('hidden'); }}; r.readAsDataURL(i.files[0]); } }
